@@ -31,7 +31,6 @@ import javax.swing.ImageIcon;
 import javax.swing.JFileChooser;
 import javax.swing.JLabel;
 import javax.swing.JList;
-import javax.swing.JTextArea;
 import javax.swing.ListCellRenderer;
 import javax.swing.border.EmptyBorder;
 import javax.swing.text.BadLocationException;
@@ -76,6 +75,8 @@ public class ChatApplication extends javax.swing.JFrame {
         try {
             DataOutputStream dos = new DataOutputStream(this.socket.getOutputStream());
             dos.writeUTF(Server.LOGOUT_MESSAGE);
+            Server.users.remove(this.dto.getUsername());
+            Server.i--;
             this.socket = null;
         } catch (IOException e) {
             System.out.println(e.getMessage());
@@ -104,7 +105,9 @@ public class ChatApplication extends javax.swing.JFrame {
         try {
             connectServer();
         } catch (IOException ex) {
+            ex.printStackTrace();
         }
+
         docMessage = txtMessage.getStyledDocument();
         left = new SimpleAttributeSet();
         StyleConstants.setAlignment(left, StyleConstants.ALIGN_LEFT);
@@ -126,44 +129,46 @@ public class ChatApplication extends javax.swing.JFrame {
                 DataInputStream dis = new DataInputStream(socket.getInputStream());
                 DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
                 dos.writeUTF(this.dto.getUsername());
-                Thread readMessage = new Thread(new Runnable() {
-                    @Override
-                    public void run() {
-                        while (true) {
-                            String msg;
-                            try {
-                                msg = dis.readUTF();
-                                if (msg.startsWith(Server.UPDATE_USERS)) {
-                                    updateUsersList(msg);
-                                } else if (msg.equals(Server.LOGOUT_MESSAGE)) {
-                                    break;
-                                } else if (msg.contains("FileName://")) {
-                                    StringTokenizer stk = new StringTokenizer(msg, "|");
-                                    stk.nextToken();
-                                    String fileName = stk.nextToken();
-                                    String contentFile = stk.nextToken();
-                                    messegesLeftTablePane(lblFullnameWelcome.getText() + ": " + fileName);
-                                    int chooice = JOptionPane.showConfirmDialog(null, "Do you want to save file: "
-                                            + fileName, lblFullnameWelcome.getText()
-                                            + " has sent you a file", JOptionPane.YES_NO_OPTION);
-                                    if (chooice == JOptionPane.YES_OPTION) {
-                                        saveFile(fileName, contentFile);
-                                    }
-                                } else if (msg.contains("Picture://")) {
-                                    StringTokenizer stk = new StringTokenizer(msg, "|");
-                                    stk.nextToken();
-                                    String filePath = stk.nextToken();
-                                    bi = ImageIO.read(new File(filePath));
-                                    messegesLeftTablePane("Anonymous.jpg");
-                                    int chooice = JOptionPane.showConfirmDialog(null, "Do you want to save file Anonymous.jpg? ", lblFullnameWelcome.getText() + " has sent you a file", JOptionPane.YES_NO_OPTION);
-                                    if (chooice == JOptionPane.YES_OPTION) {
-                                        ImageIO.write(bi, "jpg", new File("Anonymous.png"));
-                                    }
-                                } else {
-                                    messegesLeftTablePane(msg.trim());
+
+                Thread readMessage = new Thread(() -> {
+                    while (true) {
+                        String msg;
+                        try {
+                            msg = dis.readUTF();
+                            System.out.println(msg);
+                            if (msg.startsWith(Server.UPDATE_USERS)) {
+                                updateUsersList(msg);
+                            } else if (msg.equals(Server.LOGOUT_MESSAGE)) {
+                                Server.users.remove(this.dto.getUsername());
+                                Server.i--;
+                                break;
+                            } else if (msg.contains("FileName://")) {
+                                StringTokenizer stk = new StringTokenizer(msg, "|");
+                                stk.nextToken();
+                                String fileName = stk.nextToken();
+                                String contentFile = stk.nextToken();
+                                messegesLeftTablePane(lblFullnameWelcome.getText() + ": " + fileName);
+                                int chooice = JOptionPane.showConfirmDialog(null, "Do you want to save file: "
+                                        + fileName, lblFullnameWelcome.getText()
+                                        + " has sent you a file", JOptionPane.YES_NO_OPTION);
+                                if (chooice == JOptionPane.YES_OPTION) {
+                                    saveFile(fileName, contentFile);
                                 }
-                            } catch (IOException | BadLocationException | SQLException e) {
+                            } else if (msg.contains("Picture://")) {
+                                StringTokenizer stk = new StringTokenizer(msg, "|");
+                                stk.nextToken();
+                                String filePath = stk.nextToken();
+                                bi = ImageIO.read(new File(filePath));
+                                messegesLeftTablePane("Anonymous.jpg");
+                                int chooice = JOptionPane.showConfirmDialog(null, "Do you want to save file Anonymous.jpg? ", lblFullnameWelcome.getText() + " has sent you a file", JOptionPane.YES_NO_OPTION);
+                                if (chooice == JOptionPane.YES_OPTION) {
+                                    ImageIO.write(bi, "jpg", new File("Anonymous.png"));
+                                }
+                            } else {
+                                messegesLeftTablePane(msg.trim());
                             }
+                        } catch (IOException | BadLocationException | SQLException e) {
+                            System.out.println(e.getMessage());
                         }
                     }
                 });
@@ -174,12 +179,13 @@ public class ChatApplication extends javax.swing.JFrame {
     }
 
     private void messegesLeftTablePane(String msg) throws BadLocationException {
-        docMessage.insertString(docMessage.getLength(), "\n" + listContact.getSelectedValue().getFullname() + ": " + msg.trim() + "\t", left);
+        docMessage.insertString(docMessage.getLength(), "\n" + msg.trim() + "\t", left);
         docMessage.setParagraphAttributes(docMessage.getLength(), 1, left, false);
     }
 
     private void messegesRightTablePane(String msg) throws BadLocationException {
         docMessage.insertString(docMessage.getLength(), "\n" + this.dto.getFullname() + ": " + msg.trim() + "\t", right);
+        System.out.println("");
         docMessage.setParagraphAttributes(docMessage.getLength(), 1, right, false);
     }
 
@@ -1056,35 +1062,33 @@ public class ChatApplication extends javax.swing.JFrame {
     }//GEN-LAST:event_lblMenuMousePressed
 
     private void lblLeftArrowMousePressed(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_lblLeftArrowMousePressed
-        Thread thread = new Thread(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    for (int i = 0; i <= 6; i++) {
-                        if (i == 1) {
-                            pnlMenu.setSize(250, 440);
-                            lblLeftArrow.setSize(0, 0);
-                        }
-                        if (i == 2) {
-                            pnlMenu.setSize(200, 440);
-                        }
-                        if (i == 3) {
-                            pnlMenu.setSize(150, 440);
-                        }
-                        if (i == 4) {
-                            pnlMenu.setSize(100, 440);
-                        }
-                        if (i == 5) {
-                            pnlMenu.setSize(50, 440);
-                        }
-                        if (i == 6) {
-                            lblMenu.setSize(40, 40);
-                            pnlMenu.setSize(0, 440);
-                        }
-                        Thread.sleep(50);
+        Thread thread;
+        thread = new Thread(() -> {
+            try {
+                for (int i = 0; i <= 6; i++) {
+                    if (i == 1) {
+                        pnlMenu.setSize(250, 440);
+                        lblLeftArrow.setSize(0, 0);
                     }
-                } catch (InterruptedException e) {
+                    if (i == 2) {
+                        pnlMenu.setSize(200, 440);
+                    }
+                    if (i == 3) {
+                        pnlMenu.setSize(150, 440);
+                    }
+                    if (i == 4) {
+                        pnlMenu.setSize(100, 440);
+                    }
+                    if (i == 5) {
+                        pnlMenu.setSize(50, 440);
+                    }
+                    if (i == 6) {
+                        lblMenu.setSize(40, 40);
+                        pnlMenu.setSize(0, 440);
+                    }
+                    Thread.sleep(50);
                 }
+            } catch (InterruptedException e) {
             }
         });
         if (isOpen) {
@@ -1128,22 +1132,22 @@ public class ChatApplication extends javax.swing.JFrame {
             file = fileChooser.getSelectedFile();
             try {
                 FileReader fr = new FileReader(file);
-                BufferedReader br = new BufferedReader(fr);
-                String details;
-                while ((details = br.readLine()) != null) {
-                    sb.append(details);
-                    sb.append("\n");
-                }
-                String fileName = file.getName();
+                try (BufferedReader br = new BufferedReader(fr)) {
+                    String details;
+                    while ((details = br.readLine()) != null) {
+                        sb.append(details);
+                        sb.append("\n");
+                    }
+                    String fileName = file.getName();
 
-                if (fileName.contains(".jpg") || fileName.contains(".png") || fileName.contains(".jpeg")) {
-                    fileContents = "\nPicture://|" + file.getAbsolutePath();
-                    txtMessages.setText(fileName);
-                } else {
-                    fileContents = "\nFileName://|" + fileName + "|" + sb;
-                    txtMessages.setText(fileName);
+                    if (fileName.contains(".jpg") || fileName.contains(".png") || fileName.contains(".jpeg")) {
+                        fileContents = "\nPicture://|" + file.getAbsolutePath();
+                        txtMessages.setText(fileName);
+                    } else {
+                        fileContents = "\nFileName://|" + fileName + "|" + sb;
+                        txtMessages.setText(fileName);
+                    }
                 }
-                br.close();
             } catch (FileNotFoundException ex) {
             } catch (IOException ex) {
             }
@@ -1192,10 +1196,9 @@ public class ChatApplication extends javax.swing.JFrame {
             } else {
                 String username = listContact.getSelectedValue().getUsername();
                 if (username != null) {
-                    dos.writeUTF(send + "#" + username.trim());
+                    dos.writeUTF(this.dto.getFullname() + "#" + send + "#" + username.trim());
                     dos.flush();
                     send = replaceEmoji(send); // Reaplce Emoji
-                    System.out.println(send);
                     messegesRightTablePane(send);
                     txtMessages.setText("");
                 }

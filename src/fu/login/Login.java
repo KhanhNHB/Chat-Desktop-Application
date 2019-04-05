@@ -165,12 +165,10 @@ public class Login extends javax.swing.JFrame {
                 txtUsername.setText("");
                 txtPassword.setText("");
                 JOptionPane.showMessageDialog(this, "Incorrect username or password.");
-                return;
             }
         } catch (SQLException ex) {
             if (ex.getMessage().contains("duplicate key")) {
                 JOptionPane.showMessageDialog(this, "Username is exist");
-                return;
             }
         } catch (IOException ex) {
             Logger.getLogger(Login.class.getName()).log(Level.SEVERE, null, ex);

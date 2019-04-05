@@ -6,11 +6,11 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
 import java.util.StringTokenizer;
-import javax.swing.JTextPane;
 
-public class ClientHandler implements Runnable {
+public final class ClientHandler implements Runnable {
 
     private String name;
     private DataInputStream dis;
@@ -18,17 +18,15 @@ public class ClientHandler implements Runnable {
     private Socket socket;
     private ArrayList<String> users = new ArrayList<>();
     private ArrayList all = new ArrayList<>();
-    private JTextPane txtMessege;
-    
+
     public ClientHandler(Socket socket, ArrayList all, ArrayList users,
-            DataInputStream dis, DataOutputStream dos, JTextPane txtMessge) {
+            DataInputStream dis, DataOutputStream dos) {
         this.dis = dis;
         this.dos = dos;
         this.socket = socket;
         this.all = all;
         this.users = users;
-        this.txtMessege = txtMessge;
-        
+
         try {
             this.name = dis.readUTF();
             System.out.println(this.name + " Online.");
@@ -51,35 +49,40 @@ public class ClientHandler implements Runnable {
                 received = dis.readUTF();
 
                 if (received.toLowerCase().equals(Server.LOGOUT_MESSAGE)) {
+                    users.remove(name);
+                    all.remove(socket);
+                    sendNewUserList();
                     break;
                 }
 
                 StringTokenizer st = new StringTokenizer(received, "#");
+                String Sender = st.nextToken();
                 String MsgToSend = st.nextToken();
                 String recipient = st.nextToken();
 
-                for (ClientHandler clientHandler : Server.ar) {
+                Server.ar.forEach((clientHandler) -> {
                     System.out.println("User online: " + clientHandler.name);
-                }
-                
+                });
+
                 for (ClientHandler mc : Server.ar) {
-                    System.out.println("Client: " + mc.name);
+                    System.out.println("Contact in list: " + mc.name);
                     System.out.println("Recipient: " + recipient);
-                    
+
                     if (mc.name.equals(recipient)) {
-                        mc.dos.writeUTF(MsgToSend);
+                        mc.dos.writeUTF(Sender + ": " + MsgToSend);
+                        System.out.println("Vao ne: " + MsgToSend);
                         break;
                     }
+                    
                 }
+                System.out.println("------------------- End for  --------------------");
             }
             dos.writeUTF(Server.LOGOUT_MESSAGE);
             dos.flush();
 
-            users.remove(name);
-            all.remove(socket);
             Server.i--;
 
-//            tellEveryOne("\t\t****** " + name + " Logged out at " + (new Date()) + " ******");
+            tellEveryOne("\t\t****** " + name + " Logged out at " + (new Date()) + " ******");
             sendNewUserList();
 
             socket.close();

@@ -8,7 +8,6 @@ import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.ArrayList;
 import java.util.Vector;
-import javax.swing.JTextPane;
 
 public class Server {
 
@@ -30,15 +29,13 @@ public class Server {
             DataInputStream dis = new DataInputStream(socket.getInputStream());
             DataOutputStream dos = new DataOutputStream(socket.getOutputStream());
 
-            JTextPane txtMesseges = new JTextPane();
-            ClientHandler mtch = new ClientHandler(socket, all, users, dis, dos, txtMesseges);
+            ClientHandler mtch = new ClientHandler(socket, all, users, dis, dos);
             ar.add(mtch);
 
             Thread t = new Thread(mtch);
             Server.i++;
             System.out.println("Adding this client to active client: " + i + " list");
             t.start();
-
         }
     }
 }
